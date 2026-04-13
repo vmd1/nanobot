@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Install system dependencies (including Git and Matrix-required libs)
+# Install system dependencies (including Matrix-required libs)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg git bubblewrap openssh-client \
@@ -19,11 +19,10 @@ WORKDIR /app
 # Clone the latest version from GitHub
 RUN git clone --depth 1 https://github.com/HKUDS/nanobot.git .
 
-# Install nanobot with Matrix support using uv
-# --system flag is used because we are in a slim container environment
+# Install nanobot with Matrix support
 RUN uv pip install --system --no-cache ".[matrix]"
 
-# Build the WhatsApp bridge (required if you plan to use it)
+# Build the WhatsApp bridge
 WORKDIR /app/bridge
 RUN npm install && npm run build
 WORKDIR /app
@@ -33,9 +32,9 @@ RUN useradd -m -u 1000 -s /bin/bash nanobot && \
     mkdir -p /home/nanobot/.nanobot && \
     chown -R nanobot:nanobot /home/nanobot /app
 
-# Setup entrypoint
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Set permissions on the cloned entrypoint.sh (No COPY needed!)
+RUN chmod +x /app/entrypoint.sh && \
+    ln -s /app/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 USER nanobot
 ENV HOME=/home/nanobot
@@ -44,5 +43,6 @@ ENV PYTHONUNBUFFERED=1
 # Gateway default port
 EXPOSE 18790
 
-ENTRYPOINT ["entrypoint.sh"]
+# Use the entrypoint from the cloned repo
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gateway"]
